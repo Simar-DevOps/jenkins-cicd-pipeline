@@ -1,0 +1,7 @@
+workflow-aggregator
+git
+github
+ssh-agent
+credentials-binding
+pipeline-stage-view
+junit
