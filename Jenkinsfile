@@ -2,12 +2,14 @@ pipeline {
   agent any
 
   environment {
-    APP_NAME = 'flask-hello'     // customize if you want
-    EC2_USER = 'ubuntu'          // Amazon Linux: 'ec2-user'
-    APP_PORT = '8000'
+    APP_NAME   = 'flask-hello'   // customize if you want
+    EC2_USER   = 'ubuntu'        // Amazon Linux would be 'ec2-user'
+    APP_PORT   = '8000'
+    PYTHONPATH = "${WORKSPACE}"  // <-- makes 'app' importable during tests
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         checkout scm
@@ -22,6 +24,8 @@ pipeline {
           . venv/bin/activate
           pip install --upgrade pip
           pip install -r app/requirements.txt pytest
+          # Extra safety: ensure PYTHONPATH is set even inside the shell
+          export PYTHONPATH="$PWD"
           pytest -q
         '''
       }
@@ -38,8 +42,12 @@ pipeline {
           sshagent(credentials: ['ec2-ssh-key']) {
             sh '''
               set -eux
+              # Stage files on the instance
               ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "sudo rm -rf /tmp/src && mkdir -p /tmp/src"
               scp -r -o StrictHostKeyChecking=no app deploy ${EC2_USER}@${EC2_HOST}:/tmp/src/
+              # Normalize CRLF (Windows) to LF so bash can run the script
+              ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "sed -i 's/\\r$//' /tmp/src/deploy/remote_setup.sh"
+              # First-time / idempotent setup + restart
               ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "chmod +x /tmp/src/deploy/remote_setup.sh && sudo /tmp/src/deploy/remote_setup.sh ${APP_NAME} ${APP_PORT}"
             '''
           }
