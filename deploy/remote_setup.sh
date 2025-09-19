@@ -7,10 +7,17 @@ APP_PORT="${2:-8000}"
 APP_DIR="/opt/${APP_NAME}"
 SRC_DIR="/tmp/src"
 
-# Ensure base packages
-if ! command -v python3 >/dev/null 2>&1; then
-  sudo apt-get update -y
-  sudo apt-get install -y python3 python3-venv python3-pip
+# Always make sure required packages are present (Ubuntu 22.04/24.04 safe)
+sudo apt-get update -y
+# Try both the meta and versioned venv packages; ignore errors if one doesn't exist
+sudo apt-get install -y python3 python3-pip || true
+sudo apt-get install -y python3-venv || true
+sudo apt-get install -y python3.12-venv || true
+
+# If venv still missing, fail with a clear message
+if ! python3 -m venv --help >/dev/null 2>&1; then
+  echo "ERROR: python3 venv module not available. Install python3-venv (or python3.12-venv) and retry."
+  exit 1
 fi
 
 # Seed/refresh code
