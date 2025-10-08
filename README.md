@@ -3,10 +3,10 @@
 [![License](https://img.shields.io/badge/License-MIT-informational)](LICENSE)
 
 ## What’s here
-- `Jenkinsfile` — build → test (pytest) → deploy to EC2 via SSH → post-deploy health check
-- `jenkins/basic-security.groovy` — baseline hardening for a fresh Jenkins
-- `deploy/remote_setup.sh` — creates venv, installs deps, configures `systemd` service
-- `app/` — minimal Flask demo app
+- `./Jenkinsfile` — build → test (pytest) → deploy to EC2 via SSH → post-deploy health check
+- `./jenkins/basic-security.groovy` — baseline hardening for a fresh Jenkins
+- `./deploy/remote_setup.sh` — creates venv, installs deps, configures `systemd` service
+- `./app/` — minimal Flask demo app
 
 Pipeline stages:
 - Checkout
@@ -14,7 +14,7 @@ Pipeline stages:
 - Deploy (scp app/ + deploy/ to EC2; remote script sets up venv & systemd)
 - Post-deploy health check
 
-## Prereqs
+## Prerequisites
 - Docker Desktop
 - Ubuntu 22.04 EC2 instance
   - Inbound 22/tcp (from your IP)
