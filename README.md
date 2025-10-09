@@ -1,38 +1,53 @@
 [![tf-ci](https://github.com/Simar-DevOps/azure-static-website-mini/actions/workflows/tf-ci.yml/badge.svg)](https://github.com/Simar-DevOps/azure-static-website-mini/actions/workflows/tf-ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Azure Static Website → Terraform & Bicep (Validate-only CI)
-License: MIT
+# Azure Static Website → Terraform & Bicep (Validate-only CI)
 
-What’s here
-./terraform/versions.tf — Terraform + azurerm provider pin
-./terraform/variables.tf — RG/location/unique storage account name
-./terraform/main.tf — RG + Storage Account + azurerm_storage_account_static_website + upload index/404
-./terraform/outputs.tf — web endpoint + names
-./bicep/main.bicep — enable static website (no file uploads)
-./.github/workflows/tf-ci.yml — CI: fmt → init(-backend=false) → validate
-./docs/az900-crash-notes.md — AZ-900 crash notes (key services & concepts)
+> **No-cost mode:** CI runs `terraform fmt`, `init -backend=false`, and `validate` only. No resources are created by default.
 
-Pipeline stages (CI)
-Checkout
-Terraform fmt (enforce style)
-Terraform init (no backend)
-Terraform validate (syntax/schema)
-— No plan/apply in CI (no-cost by default)
+---
 
-Prerequisites
-None for CI (validate-only)
-Optional local deploy:
-- Azure CLI (az)
+## What’s here
+- `./terraform/versions.tf` — Terraform + `azurerm` provider pin  
+- `./terraform/variables.tf` — RG/location/unique storage account name  
+- `./terraform/main.tf` — RG + Storage Account + `azurerm_storage_account_static_website` + upload `index.html`/`404.html`  
+- `./terraform/outputs.tf` — web endpoint + names  
+- `./bicep/main.bicep` — enable static website (no file uploads)  
+- `./.github/workflows/tf-ci.yml` — CI: **fmt → init(-backend=false) → validate**  
+- `./docs/az900-crash-notes.md` — AZ-900 crash notes (key services & concepts)
+
+---
+
+## Pipeline stages (CI)
+1. **Checkout**
+2. **Terraform fmt** (enforce style)
+3. **Terraform init** (no backend)
+4. **Terraform validate** (syntax/schema)  
+   > **No `plan`/`apply` in CI** — keeps costs at zero.
+
+---
+
+## Prerequisites
+**None** for CI (validate-only).
+
+**Optional local deploy needs:**
+- Azure CLI (`az`)
 - Terraform ≥ 1.6
-- Azure subscription (any tier)
+- Any Azure subscription
 
-Quick start (CI)
-Push to main or open a PR → GitHub Actions runs fmt/init/validate and stays green without deploying
+---
 
-Quick start (optional local Terraform deploy)
-# Login + create demo RG
+## Quick start (CI)
+Push to `main` or open a PR → GitHub Actions runs **fmt/init/validate** and stays green without deploying.
+
+---
+
+## Quick start (optional local Terraform deploy)
+
+### Login + create demo RG
+```bash
 az login
 az group create -n rg-azure-staticweb-demo -l eastus
+
 # Deploy
 cd terraform
 terraform init
