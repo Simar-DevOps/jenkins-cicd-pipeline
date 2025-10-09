@@ -1,42 +1,71 @@
-# Jenkins CI/CD → EC2 (Flask via SSH + systemd)
+[![tf-ci](https://github.com/Simar-DevOps/azure-static-website-mini/actions/workflows/tf-ci.yml/badge.svg)](https://github.com/Simar-DevOps/azure-static-website-mini/actions/workflows/tf-ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[![License](https://img.shields.io/badge/License-MIT-informational)](LICENSE)
+Azure Static Website → Terraform & Bicep (Validate-only CI)
+License: MIT
 
-## What’s here
-- `./Jenkinsfile` — build → test (pytest) → deploy to EC2 via SSH → post-deploy health check
-- `./jenkins/basic-security.groovy` — baseline hardening for a fresh Jenkins
-- `./deploy/remote_setup.sh` — creates venv, installs deps, configures `systemd` service
-- `./app/` — minimal Flask demo app
+What’s here
+./terraform/versions.tf — Terraform + azurerm provider pin
+./terraform/variables.tf — RG/location/unique storage account name
+./terraform/main.tf — RG + Storage Account + azurerm_storage_account_static_website + upload index/404
+./terraform/outputs.tf — web endpoint + names
+./bicep/main.bicep — enable static website (no file uploads)
+./.github/workflows/tf-ci.yml — CI: fmt → init(-backend=false) → validate
+./docs/az900-crash-notes.md — AZ-900 crash notes (key services & concepts)
 
-Pipeline stages:
-- Checkout
-- Test (pytest in a venv inside Jenkins)
-- Deploy (scp app/ + deploy/ to EC2; remote script sets up venv & systemd)
-- Post-deploy health check
+Pipeline stages (CI)
+Checkout
+Terraform fmt (enforce style)
+Terraform init (no backend)
+Terraform validate (syntax/schema)
+— No plan/apply in CI (no-cost by default)
 
-## Prerequisites
-- Docker Desktop
-- Ubuntu 22.04 EC2 instance
-  - Inbound 22/tcp (from your IP)
-  - Inbound 8000/tcp (0.0.0.0/0 for demo)
-  - Key pair (.pem) available
-- Public IP/DNS of the EC2 instance
+Prerequisites
+None for CI (validate-only)
+Optional local deploy:
+- Azure CLI (az)
+- Terraform ≥ 1.6
+- Azure subscription (any tier)
 
-## Quick start
-1) Start Jenkins:
-cd jenkins
-docker compose build
-docker compose up -d
-Open http://localhost:8080 (demo admin/admin)
+Quick start (CI)
+Push to main or open a PR → GitHub Actions runs fmt/init/validate and stays green without deploying
 
-2) In Jenkins:
-- Credentials → Global:
-  - Secret text (ID: `ec2-host`) = your EC2 IP or DNS
-  - SSH Username with private key (ID: `ec2-ssh-key`) = user `ubuntu`, paste your PEM
+Quick start (optional local Terraform deploy)
+# Login + create demo RG
+az login
+az group create -n rg-azure-staticweb-demo -l eastus
+# Deploy
+cd terraform
+terraform init
+terraform plan -var "storage_account_name=<globally-unique-lowercase-3to24>"
+terraform apply -auto-approve -var "storage_account_name=<globally-unique-lowercase-3to24>"
+# Endpoint
+terraform output -raw static_site_url
 
-3) Create Job:
-- New Item → Pipeline `flask-ec2-deploy`
-- Pipeline from SCM → Git → your repo → Script Path: `Jenkinsfile`
-- Trigger: Poll SCM `H/5 * * * *` (or GitHub webhook if exposed)
+Quick start (optional Bicep enablement)
+az login
+az group create -n rg-azure-staticweb-demo -l eastus
+az deployment group create \
+  --resource-group rg-azure-staticweb-demo \
+  --template-file ./bicep/main.bicep \
+  --parameters storageAccountName=<globally-unique-lowercase>
 
-4) Build → Visit `http://<EC2_PUBLIC_IP>:8000/health` → `OK`
+Cleanup (if you deployed locally)
+cd terraform
+terraform destroy -auto-approve -var "storage_account_name=<same-name>"
+az group delete -n rg-azure-staticweb-demo -y
+
+Notes
+- Validate-only CI by design to avoid charges
+- Switch to OIDC later for safe deploys from Actions (azure/login@v2 + repo secrets AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID)
+- AZ-900 refresher: see docs/az900-crash-notes.md
+
+Contributing
+Branching: feature/*, fix/*, chore/*
+Commits: Conventional Commits (e.g., feat(terraform): enable static website)
+PRs: Keep them small. Use the PR template. Note risk & rollback.
+
+Local checks (before pushing)
+cd terraform
+terraform fmt -recursive
+terraform init -backend=false
+terraform validate
